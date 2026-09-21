@@ -1,0 +1,46 @@
+{
+  "real": {
+    "utt_id": "LA_T_8970804",
+    "system_id": "-",
+    "key": "bonafide",
+    "label": 0,
+    "duration_before_s": 3.0203,
+    "duration_after_s": 4.0,
+    "spectrogram_shape": [
+      80,
+      401
+    ]
+  },
+  "fake": {
+    "utt_id": "LA_T_3653342",
+    "system_id": "A06",
+    "key": "spoof",
+    "label": 1,
+    "duration_before_s": 5.6634,
+    "duration_after_s": 4.0,
+    "spectrogram_shape": [
+      80,
+      401
+    ]
+  },
+  "seed": 1337,
+  "audio": {
+    "sample_rate": 16000,
+    "duration_seconds": 4.0,
+    "normalise": "peak",
+    "pad_mode": "repeat"
+  },
+  "features": {
+    "front_end": "logmel",
+    "logmel": {
+      "n_fft": 512,
+      "win_length_ms": 25,
+      "hop_length_ms": 10,
+      "n_mels": 80,
+      "f_min": 0,
+      "f_max": 8000,
+      "log_offset": 1e-06
+    }
+  },
+  "figure": "C:\\Users\\Vaibhav Bisht\\Desktop\\7 Sem Project\\figures\\first_look.png"
+}

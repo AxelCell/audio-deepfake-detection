@@ -33,5 +33,5 @@ features:
     log_offset: 1.0e-6
 
 inspect:
-  real_utt_id: null         # filled in after the first run
-  fake_utt_id: null
+  real_utt_id: LA_T_8970804   # frozen after the first run
+  fake_utt_id: LA_T_3653342   # attack A06

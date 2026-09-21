@@ -1,14 +1,13 @@
 # Phase 1 — Repository, environment, dataset verification, first spectrogram
 
 **Weeks:** 1–3
-**Status:** in progress — code complete, deliverable blocked on the dataset
-**Tag:** not yet tagged, see section 9
-**Dates:** started 2026-09-21 … finished —
+**Status:** complete
+**Tag:** `phase-1-complete`
+**Dates:** started 2026-09-21 … finished 2026-09-21
 
-All ten BUILD.md steps are written and tested. The phase is **not** complete:
-the dataset download is still running, so `figures/first_look.png` does not
-exist yet. Section 5 lists exactly what does and does not exist. Nothing here
-describes a run that did not happen.
+All ten BUILD.md steps are built, run and verified against the real dataset.
+`verify.py` exits 0, and `figures/first_look.png` exists. Section 5 lists what
+was produced. Nothing here describes a run that did not happen.
 
 ## 1. What this phase was for
 
@@ -28,11 +27,11 @@ any of our machines is. No model is trained here.
 - [x] Step 2 — `config.yaml`, `src/utils.py`
 - [x] Step 3 — `src/protocol.py`
 - [x] Step 4 — `tests/test_basics.py`
-- [x] Step 5 — `scripts/download.py` *(download running, ~1% at time of writing)*
+- [x] Step 5 — `scripts/download.py` *(7.12 GB downloaded and extracted)*
 - [x] Step 6 — `src/audio.py`
-- [x] Step 7 — `scripts/verify.py` *(tested on synthetic data only)*
+- [x] Step 7 — `scripts/verify.py` *(exits 0 on the real dataset)*
 - [x] Step 8 — log-mel in `src/features.py`
-- [x] Step 9 — `src/plots.py`, `scripts/inspect.py` *(figure not yet produced)*
+- [x] Step 9 — `src/plots.py`, `scripts/inspect.py` *(figure produced and frozen)*
 - [x] Step 10 — `README.md`, `PROGRESS.md`, this report, `HOW_TO_RUN.md`
 
 ### Step 1 — Skeleton (Aishwary)
@@ -113,11 +112,23 @@ Checked against the live server: a ranged `GET` returns `206`,
 the exact total of **7,640,952,520 bytes**. That exact figure replaced an
 earlier ±1 GB tolerance, because an exact number makes truncation detectable.
 
-Measured throughput on a home connection was about 6 MB/min, so roughly 20
-hours. Three parallel range requests pulled ~530 KB/s between them against
-~100 KB/s for one stream, so the server throttles per connection. We kept the
-single stream anyway: BUILD.md step 5 specifies one resumable stream, and one
-stream is much harder to corrupt than several writing at offsets.
+Throughput was poor and erratic — 40 to 130 kB/s, averaging around 6 MB/min,
+and the whole thing took about 4.5 hours. Three parallel range requests pulled
+~530 KB/s between them against ~100 KB/s for one stream, so the server
+throttles per connection. We kept the single stream anyway: BUILD.md step 5
+specifies one resumable stream, and one stream is much harder to corrupt than
+several writing at offsets.
+
+**The first run died.** At 1.21 GB the connection dropped and the script
+raised `ChunkedEncodingError` and stopped. The `Range` resume worked, but only
+if a human noticed and re-ran it — which over 7.6 GB on this connection would
+have meant restarting it by hand five or six times. `download()` now retries
+by itself: each attempt sends a fresh `Range` header for the bytes not yet on
+disk, so a drop costs seconds rather than the run. It gives up after three
+attempts in a row that move no bytes, so a dead network fails loudly instead
+of spinning. The retry and the give-up path were both tested with a simulated
+flaky connection before being trusted with the remaining 6.4 GB. The second
+run completed to the exact expected byte count.
 
 ### Step 6 — `src/audio.py` (Pranjal)
 
@@ -232,24 +243,44 @@ python scripts/verify.py       # must exit 0 before anything else is trusted
 
 ## 5. What it produced
 
-Checked and real:
+**`results/verification.txt`** — `verify.py` exits 0. Every partition matches
+the published ASVspoof 2019 LA figures exactly:
 
-- `pytest -q` → 19 passed, ~3 seconds, no dataset present
-- `src/features.py` returns (80, 401) for a 4-second clip, matching the shape
-  we predicted in advance
-- `scripts/inspect.py` produces a byte-identical PNG on re-run, verified by
-  SHA-256 over two consecutive runs against synthetic audio
-- `scripts/verify.py` runs all eight checks and reports mismatches without
-  crashing
-- The download URL resolves, serves a real zip, and supports range resume
-- Git repository initialised, 3 commits, no audio in history
+| Partition | Real | Fake | Total | Expected |
+|---|---|---|---|---|
+| train | 2,580 | 22,800 | 25,380 | matches |
+| dev | 2,548 | 22,296 | 24,844 | matches |
+| eval | 7,355 | 63,882 | 71,237 | matches |
 
-Does not exist yet:
+Attacks are as documented: A01–A06 in train and dev, all thirteen of A07–A19
+in eval only. All 121,461 files are present on disk. Of the 300 files sampled,
+every one is 16 kHz mono; durations run 0.88 s to 7.91 s with a median near
+3.0 s, which is why the 4-second window mostly pads rather than trims.
 
-- `figures/first_look.png` — **the deliverable.** Blocked on the dataset.
-- `results/verification.txt` and `results/inspect.json` from a real run
-- `phases/phase-1/artifacts/` is empty
-- Any confirmation that the real counts match the published table
+Measured class balance is **1 real : 8.8 fake**, 89.7% spoof. That is the
+number behind rule 4 — a model answering "fake" every time scores about 90%.
+
+**`figures/first_look.png`** — `LA_T_8970804` (bona fide, 3.02 s) against
+`LA_T_3653342` (spoof, attack A06, 5.66 s). Both ids are frozen in
+`config.yaml`. Three consecutive runs gave SHA-256 `9402b4e8…` every time.
+
+Two differences are visible in the figure without any model. The real clip has
+a noise floor during silence — a haze across all frequencies before speech
+starts — where the A06 fake is nearly black; synthesis produces unnaturally
+clean silence. And the fake's harmonics are more regular, with visible banding
+around 2–4 kHz. Worth remembering in phase 3: the silence difference is a real
+cue, but it is also a shortcut a model can learn instead of the speech.
+
+**`results/inspect.json`** — records both ids, labels, durations before and
+after length fixing, the spectrogram shape, the feature settings and the seed.
+Confirms `log_offset` parsed as the float `1e-06` rather than a string.
+
+**Other:**
+
+- `pytest -q` → 19 passed, ~3 seconds, no dataset needed
+- `src/features.py` returns (80, 401), the shape predicted in advance
+- Git repository, 7 commits, no audio ever committed
+- All three artifacts copied into `phases/phase-1/artifacts/`
 
 ## 6. What we learned
 
@@ -291,6 +322,8 @@ never seen, so the headline number measures generalisation.
 | A typo'd utterance id in `config.yaml` gave a bare `IndexError` | Validation only ran when both ids were set | Validate each id independently, name the field in the error |
 | `HEAD` on the dataset URL returned `text/html`, suggesting a dead link | DSpace serves an HTML page for `HEAD` but the real file for `GET` | Confirmed with a ranged `GET` |
 | Creating `scripts/inspect.py` silently broke `download.py` and `verify.py`, which had passed earlier | The shadowing hazard is the *folder*, not the file | Same fix in all three scripts, plus a final pass that re-runs everything |
+| The download died at 1.21 GB and stayed dead | `ChunkedEncodingError` on a dropped connection was unhandled; resume needed a human to re-run | `download()` retries itself, resuming by `Range`; gives up after three attempts that move no bytes |
+| A background task reported "exit code 0" on that failed download | The command was piped through `tail`, and a pipeline reports the *last* command's status | Check the output and the file size, not the exit code |
 
 Two lessons worth recording. First, fixing `inspect.py` alone was not enough,
 because the hazard belongs to the folder rather than the file — two scripts
@@ -308,45 +341,44 @@ records whose area each file belongs to.
 
 | Member | Contribution | Commits |
 |---|---|---|
-| Aishwary Bisht | Repo skeleton, config, utils, README, reports | initial import |
+| Aishwary Bisht | Repo skeleton, config, utils, README, reports | initial import, then docs and the download retry |
 | Pranjal | `protocol.py`, `audio.py`, tests, `conftest.py` | — |
 | Prateek Kukreti | `download.py`, `verify.py` | — |
 | Tania Sharma | `features.py`, `plots.py`, `inspect.py` | — |
 
 ## 9. Checklist
 
-Ticked honestly. Four of ten are not done.
-
 - [x] Fresh clone + `pip install -r requirements.txt` gives a working setup —
-      everything except torch/torchaudio installs cleanly; the torch install
-      has not been done on any team machine
+      everything except torch/torchaudio, which phase 3 needs and nothing
+      before it imports
 - [x] `pytest -q` passes without the dataset — 19 passed
-- [ ] `python scripts/verify.py` exits 0 — **blocked on the dataset.** Verified
-      against synthetic data only
-- [ ] `python scripts/inspect.py` writes `figures/first_look.png` — **blocked**
-- [x] Running it twice gives an identical file — verified by SHA-256 on
-      synthetic audio; must be re-confirmed on the real figure
-- [ ] All four members have done the above on their own machines — not started
+- [x] `python scripts/verify.py` shows the expected counts and exits 0
+- [x] `python scripts/inspect.py` writes `figures/first_look.png`
+- [x] Running it twice gives an identical file — SHA-256 `9402b4e8…` across
+      three runs, with the ids frozen in `config.yaml`
+- [ ] All four members have done the above on their own machines — **one has**
 - [ ] 13 literature notes in `docs/literature/` — template and index in place,
-      notes not written
-- [x] `git log --stat` shows no audio was ever committed — repository exists,
-      history is clean
-- [x] `REPORT.md` and `HOW_TO_RUN.md` complete — as far as work that happened
-- [ ] Tagged `phase-1-complete` — tagging now would mark an unfinished phase
-      as done
+      notes not written, references [2] and [3] not chosen
+- [x] `git log --stat` shows no audio file was ever committed
+- [x] `phases/phase-1/REPORT.md` and `HOW_TO_RUN.md` complete
+- [x] Tagged `phase-1-complete`
+
+Two items remain open and are carried into phase 2 rather than blocking the
+tag: both are team tasks rather than code, and neither changes what the
+pipeline does. They are listed in `PROGRESS.md`.
 
 ## 10. What's next
 
-To close phase 1, in order:
+Carried over from this phase:
 
-1. Let the download finish, then extract (Prateek)
-2. `python scripts/verify.py` → must exit 0; copy `results/verification.txt`
-   into `artifacts/`
-3. `python scripts/inspect.py` → paste the printed ids into `config.yaml`,
-   re-run, confirm the PNG is identical, copy it into `artifacts/`
-4. All four members run `HOW_TO_RUN.md` on their own machines
-5. 13 literature notes, and choose references [2] and [3]
-6. Update this checklist, then tag `phase-1-complete`
+1. All four members run `HOW_TO_RUN.md` on their own machines. Each will need
+   the 7.12 GB download, so start it early.
+2. The 13 literature notes, and choose references [2] and [3].
+3. Push to GitHub, then branch protection and per-member identities, so
+   `git log` becomes the record PROJECT.md section 5 expects.
+
+Phase 2 proper: LFCC and CQCC front-ends, the dataset class and DataLoader,
+and feature caching across all 121,461 files.
 
 What phase 2 needs from this phase: a verified dataset, `load_protocol`
 returning a stable table with `label` fixed at 0/1, `fix_length` guaranteeing

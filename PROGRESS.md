@@ -4,8 +4,8 @@ Updated whenever a phase closes. One table, plus the current blocker.
 
 | Phase | Weeks | Status | Tag | Key result | Report |
 |---|---|---|---|---|---|
-| 1 | 1–3 | **in progress** | — | — | `phases/phase-1/REPORT.md` |
-| 2 | 4–5 | not started | — | — | — |
+| 1 | 1–3 | **complete** | `phase-1-complete` | dataset verified, first figure | `phases/phase-1/REPORT.md` |
+| 2 | 4–5 | next | — | — | — |
 | 3 | 6–8 | not started | — | — | — |
 | 4 | 9–11 | not started | — | — | — |
 | 5 | 12–14 | not started | — | — | — |
@@ -13,53 +13,37 @@ Updated whenever a phase closes. One table, plus the current blocker.
 | 7 | 17–18 | not started | — | — | — |
 | 8 | 19–20 | not started | — | — | — |
 
-## Where phase 1 actually stands
+## Phase 1 closed, 2026-09-21
 
-All ten BUILD.md steps are **written and exercised**. The repository is now
-under git (`9d88497`), 19 tests pass without the dataset, and `verify.py` and
-`inspect.py` have both been run end to end against a synthetic ASVspoof-shaped
-dataset: all eight verification checks fire, the figure renders, and two
-consecutive runs of `inspect.py` produce a byte-identical PNG
-(`f0df95b9...`). The figure settings are proven; only the audio behind them
-is still missing.
+The dataset is downloaded, extracted and verified, and the figure exists.
 
-### Checklist
+`scripts/verify.py` exits 0. All three partitions match the published
+ASVspoof 2019 LA counts exactly — train 25,380, dev 24,844, eval 71,237 — with
+A01–A06 in train and dev and all thirteen of A07–A19 in eval only. All 121,461
+files are present and every sampled file is 16 kHz mono. Measured class
+balance is 1 real : 8.8 fake, which is the reason we report EER and not
+accuracy.
 
-| Item | State |
-|---|---|
-| Fresh clone + `pip install -r requirements.txt` | done |
-| `pytest -q` passes without the dataset | done — 19 passed |
-| Repository under git, no audio in history | done |
-| `inspect.py` twice gives an identical file | done, on synthetic audio |
-| `phases/phase-1/REPORT.md` + `HOW_TO_RUN.md` | done |
-| `verify.py` exits 0 on the real dataset | **blocked — download** |
-| `figures/first_look.png` committed | **blocked — download** |
-| All four members have run it on their own machine | team task |
-| 13 literature notes | template + index only — see below |
-| Tagged `phase-1-complete` | not yet — needs the two blocked rows |
+`figures/first_look.png` compares `LA_T_8970804` (bona fide) against
+`LA_T_3653342` (spoof, attack A06). Both ids are frozen in `config.yaml`, and
+three consecutive runs produced SHA-256 `9402b4e8…` every time.
 
-## Blocking
+Artifacts are in `phases/phase-1/artifacts/`.
 
-1. **The dataset download is running but slow.** Started 2026-09-21 14:45,
-   measured at roughly 6 MB/min, which puts the 7.12 GB at somewhere near 20
-   hours. It resumes from a partial file, so leave it running and re-run
-   `python scripts/download.py` after any interruption. This is the only
-   thing standing between us and closing the phase. Owner: Prateek.
-2. **13 literature notes not written.** `docs/literature/TEMPLATE.md` and the
-   index in `docs/literature/README.md` are in place, with the split from
-   PROJECT.md section 5 and the papers named in LEARN.md. The notes
-   themselves are each member's own reading and are not something to
-   generate — section 4 of the template records EER figures that go straight
-   into the final report's related-work table, and a plausible-looking wrong
-   number there is worse than a blank one (CLAUDE.md rule 5).
-   References [2] and [3] are not named in any planning document and still
-   need choosing. Owner: everyone.
-3. **No remote, no branch protection, no per-member identities.** The initial
-   import is one commit under one name because the repo was created after the
-   code was written. PROJECT.md section 5 wants `git log` to be the record of
-   who did what; that starts from the next commits. Owner: Aishwary.
+## Still open, carried into phase 2
 
-## Start now so it isn't blocking later
+1. **13 literature notes.** `docs/literature/TEMPLATE.md` and the index are in
+   place with the per-member split. The notes are each member's own reading.
+   References [2] and [3] have not been chosen.
+2. **Only one machine.** The checklist wants all four members to run the
+   pipeline on their own machines. One has.
+3. **No remote yet.** Push to GitHub, then branch protection and per-member
+   identities so `git log` becomes the record PROJECT.md section 5 expects.
+4. **`data/LA.zip` is still on disk**, 7.12 GB. Safe to delete now that the
+   extraction is verified — it is only kept in case anyone wants to re-extract
+   without a four-hour download.
 
-The download, and the thirteen notes. Both are slow by nature and neither gets
-faster by waiting.
+## Next
+
+Phase 2: LFCC and CQCC front-ends, the dataset class and DataLoader, and
+feature caching over all 121,461 files.

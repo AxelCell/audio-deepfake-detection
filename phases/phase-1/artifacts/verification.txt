@@ -1,0 +1,61 @@
+======================================================================
+ASVspoof 2019 LA - dataset verification
+======================================================================
+data_root: C:\Users\Vaibhav Bisht\Desktop\7 Sem Project\data\LA
+
+1. Folder structure
+  PASS     LA/ASVspoof2019_LA_cm_protocols
+  PASS     ASVspoof2019_LA_train/flac
+  PASS     ASVspoof2019_LA_dev/flac
+  PASS     ASVspoof2019_LA_eval/flac
+
+2. Label files
+  PASS     train   25,380 rows
+  PASS     dev     24,844 rows
+  PASS     eval    71,237 rows
+
+3. Counts against the expected ASVspoof 2019 LA figures
+  partition     real     fake    total   expected total
+  train        2,580   22,800   25,380           25,380
+  PASS     train matches exactly
+  dev          2,548   22,296   24,844           24,844
+  PASS     dev matches exactly
+  eval         7,355   63,882   71,237           71,237
+  PASS     eval matches exactly
+
+4. Attack distribution
+  train  6 attacks: A01,A02,A03,A04,A05,A06
+  PASS     train has exactly the expected attacks
+  dev    6 attacks: A01,A02,A03,A04,A05,A06
+  PASS     dev has exactly the expected attacks
+  eval   13 attacks: A07,A08,A09,A10,A11,A12,A13,A14,A15,A16,A17,A18,A19
+  PASS     eval has exactly the expected attacks
+  A01-A06 in train/dev, A07-A19 in eval only. The eval attacks are
+  generators the model never sees in training, so the eval number
+  measures generalisation rather than memorisation.
+
+5. Class balance
+  train  1 real : 8.84 fake   (89.8% of clips are fake)
+  dev    1 real : 8.75 fake   (89.7% of clips are fake)
+  eval   1 real : 8.69 fake   (89.7% of clips are fake)
+
+  This is why we never report accuracy - answering 'fake' every time
+  scores about 90% here. We use EER and min t-DCF. (CLAUDE.md rule 4)
+
+6. Audio files on disk
+  PASS     train  all 25,380 files present
+  PASS     dev    all 24,844 files present
+  PASS     eval   all 71,237 files present
+
+7. Audio properties (100 random files per partition, seed 1337)
+  train  duration min 1.12s  median 3.19s  max 7.14s   (n=100)
+  PASS     train  all sampled files are 16000 Hz mono
+  dev    duration min 1.04s  median 3.21s  max 6.91s   (n=100)
+  PASS     dev    all sampled files are 16000 Hz mono
+  eval   duration min 0.88s  median 2.94s  max 7.91s   (n=100)
+  PASS     eval   all sampled files are 16000 Hz mono
+
+======================================================================
+RESULT: all checks passed. The dataset is ready.
+Next:  python scripts/inspect.py
+======================================================================
