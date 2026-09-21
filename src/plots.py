@@ -1,8 +1,4 @@
-"""Drawing functions. Figures are built here; scripts decide what to draw.
-
-Agg is selected before pyplot is imported so these work on a machine with no
-display - the lab server, or anything over SSH.
-"""
+"""Figures. Agg is set before pyplot so this works over SSH with no display."""
 
 import matplotlib
 
@@ -15,24 +11,18 @@ from src.features import ms_to_samples  # noqa: E402
 
 
 def plot_waveform(ax, wav, sample_rate, title):
-    """Amplitude against time, with the x axis in seconds rather than samples."""
     seconds = np.arange(len(wav)) / float(sample_rate)
     ax.plot(seconds, wav, linewidth=0.5)
     ax.set_xlim(0, seconds[-1] if len(seconds) else 1)
-    ax.set_ylim(-1.05, 1.05)           # waveforms are peak-normalised to +/-1
+    ax.set_ylim(-1.05, 1.05)           # peak-normalised, so always in range
     ax.set_xlabel("time (s)")
     ax.set_ylabel("amplitude")
     ax.set_title(title, fontsize=10)
 
 
 def plot_spectrogram(ax, spectrogram, config, title, vmin, vmax):
-    """Log-mel spectrogram with axes in seconds and Hz, not frames and bins.
-
-    vmin and vmax are passed in rather than computed here so that two panels
-    can share one colour scale. Without that, each panel would auto-scale to
-    its own range and the two pictures would not be comparable - differences
-    in brightness would mean nothing.
-    """
+    """vmin/vmax are passed in so both panels can share one colour scale.
+    Letting each auto-scale would make the brightness difference meaningless."""
     import librosa.display
 
     sample_rate = config["audio"]["sample_rate"]
@@ -59,20 +49,17 @@ def plot_spectrogram(ax, spectrogram, config, title, vmin, vmax):
 
 
 def first_look_figure(real, fake, config):
-    """The phase 1 deliverable: a 2x2 grid comparing a real clip to a fake one.
+    """2x2 grid: real left, fake right, waveform top, spectrogram below.
 
-    real and fake are dicts with keys: utt_id, system_id, wav, spectrogram.
-    Layout is real on the left, fake on the right, waveform on top,
-    spectrogram below.
+    real and fake are dicts with utt_id, system_id, wav and spectrogram.
     """
     sample_rate = config["audio"]["sample_rate"]
 
-    # One colour scale across both spectrograms.
     vmin = float(min(real["spectrogram"].min(), fake["spectrogram"].min()))
     vmax = float(max(real["spectrogram"].max(), fake["spectrogram"].max()))
 
-    # constrained_layout, not tight_layout: without it the waveform's
-    # 'time (s)' label collides with the spectrogram title directly below it.
+    # constrained_layout, because with tight_layout the waveform's x label
+    # collides with the spectrogram title underneath it.
     fig, axes = plt.subplots(2, 2, figsize=(12, 7), constrained_layout=True)
 
     plot_waveform(axes[0, 0], real["wav"], sample_rate,
@@ -88,21 +75,17 @@ def first_look_figure(real, fake, config):
         vmin, vmax)
 
     fig.colorbar(image, ax=axes[1, :], label="log power", pad=0.02)
-    fig.suptitle(
-        "ASVspoof 2019 LA - real vs fake, same colour scale", fontsize=12)
+    fig.suptitle("ASVspoof 2019 LA - real vs fake, same colour scale", fontsize=12)
     return fig
 
 
 def save_figure(fig, path):
-    """Save a PNG that is byte-identical when the script is re-run.
+    """Save a PNG that comes out byte-identical when the script is re-run.
 
-    matplotlib writes a 'Software: Matplotlib vX.Y.Z' tag into PNG metadata by
-    default. That alone would make two runs differ, which would break the
-    phase 1 requirement that running inspect.py twice produces an identical
-    file. Setting it to None leaves it out.
+    matplotlib stamps its own version into the PNG metadata by default, which
+    alone would make two runs differ. Setting it to None leaves it out.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
-    # No bbox_inches="tight" here - it fights with constrained_layout and can
-    # crop unpredictably, which would also threaten byte-for-byte repeatability.
+    # No bbox_inches="tight" - it fights with constrained_layout.
     fig.savefig(path, dpi=150, metadata={"Software": None})
     plt.close(fig)

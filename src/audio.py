@@ -1,10 +1,6 @@
-"""Load waveforms and put them in the shape the rest of the pipeline expects.
+"""Load a waveform and get it into the shape the rest of the pipeline wants.
 
-Three steps, always in this order:
-
-    load_audio  -> read the file as float32 mono at the right sample rate
-    normalise   -> put the amplitude on a predictable scale
-    fix_length  -> make every clip exactly the same number of samples
+Always in this order: load_audio -> normalise -> fix_length.
 """
 
 import logging
@@ -14,28 +10,19 @@ import soundfile as sf
 
 
 def load_audio(path, sample_rate):
-    """Read an audio file as a 1-D float32 array at `sample_rate`.
-
-    ASVspoof LA is already 16 kHz mono, so the resample branch should never
-    fire. It logs a warning when it does, because that means a file is not
-    what we think it is - which is worth knowing about rather than silently
-    fixing.
-    """
+    """Read an audio file as a 1-D float32 array."""
     wav, file_rate = sf.read(path, dtype="float32", always_2d=False)
 
     if wav.ndim > 1:
-        # (samples, channels) -> mono. Should not happen with this dataset.
         logging.warning("%s has %d channels, averaging to mono", path, wav.shape[1])
         wav = wav.mean(axis=1)
 
+    # ASVspoof LA is already 16 kHz mono, so this should never fire. Warn
+    # rather than resample quietly, because it means a file isn't what we
+    # think it is.
     if file_rate != sample_rate:
-        logging.warning(
-            "%s is %d Hz, expected %d Hz - resampling. Every file in "
-            "ASVspoof LA should already be 16 kHz, so check this file.",
-            path, file_rate, sample_rate,
-        )
-        # Imported here rather than at module level: librosa is slow to import
-        # and this branch is not supposed to run.
+        logging.warning("%s is %d Hz, expected %d Hz - resampling",
+                        path, file_rate, sample_rate)
         import librosa
         wav = librosa.resample(wav, orig_sr=file_rate, target_sr=sample_rate)
 
@@ -43,23 +30,20 @@ def load_audio(path, sample_rate):
 
 
 def normalise(wav, mode="peak"):
-    """Scale the waveform. 'peak' divides by the largest absolute sample.
+    """Divide by the largest absolute sample.
 
-    Recording levels vary between utterances for reasons that have nothing to
-    do with whether the speech is real or fake. Normalising stops the model
-    reading loudness as evidence.
-
-    An all-zero (digitally silent) clip is returned unchanged rather than
-    divided by zero. Silent files do occur in speech corpora.
+    Recording levels vary for reasons that have nothing to do with whether the
+    speech is real or fake, so without this the model can read loudness as
+    evidence.
     """
     if mode in (None, "none"):
         return wav
-
     if mode != "peak":
         raise ValueError(f"unknown normalise mode {mode!r}; expected 'peak' or 'none'")
 
     peak = float(np.max(np.abs(wav))) if wav.size else 0.0
     if peak == 0.0:
+        # Digitally silent clips do turn up. Don't divide by zero.
         logging.warning("all-zero waveform, returning it unchanged")
         return wav
 
@@ -67,16 +51,14 @@ def normalise(wav, mode="peak"):
 
 
 def fix_length(wav, n_samples, pad_mode="repeat"):
-    """Return exactly `n_samples` samples - always, whatever came in.
+    """Return exactly n_samples samples.
 
-    Too long  -> keep the first n_samples (deterministic, so figures repeat)
-    Too short -> 'repeat' tiles the clip until it is long enough, then trims;
-                 'zero' pads the end with silence.
+    Too long: keep the first n_samples. Too short: either tile the clip until
+    it's long enough, or pad with zeros.
 
-    'repeat' is the ASVspoof convention and is the default in config.yaml.
-    Zero-padding a 1-second clip out to 4 seconds hands the model three
-    seconds of digital silence, which is itself a strong giveaway that has
-    nothing to do with how the audio was produced.
+    'repeat' is the default because zero-padding a 1 s clip out to 4 s hands
+    the model three seconds of silence, and the amount of silence is itself a
+    giveaway that has nothing to do with how the audio was made.
     """
     n_samples = int(n_samples)
     if n_samples <= 0:

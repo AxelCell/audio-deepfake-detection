@@ -1,18 +1,22 @@
-"""Tests that must pass on a fresh clone, with no dataset and no torch.
+"""Tests that run on a fresh clone, with no dataset and no torch.
 
-Everything here builds its own miniature dataset in a temp folder, so these
-run in under a second and never touch data/.
+Everything builds its own miniature dataset in a temp folder, so the whole
+file runs in a few seconds and never touches data/.
 """
 
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 
+from src.audio import fix_length, load_audio, normalise
+from src.features import expected_n_frames, logmel, ms_to_samples
 from src.protocol import COLUMNS, load_protocol, summarise
+from src.utils import load_config
 
-# Three real and three fake, across two attacks - a miniature of the real
-# protocol format, including the always-'-' third column we throw away.
+# Three real and three fake across two attacks, including the always-'-'
+# third column that load_protocol throws away.
 FAKE_PROTOCOL = """\
 LA_0001 LA_T_0000001 - - bonafide
 LA_0001 LA_T_0000002 - A01 spoof
@@ -34,18 +38,20 @@ def mini_dataset(tmp_path):
 
     (protocols / "ASVspoof2019.LA.cm.train.trn.txt").write_text(FAKE_PROTOCOL)
 
-    # Empty .flac files. load_protocol must not care that they are empty -
-    # checking the audio is verify.py's job, not the protocol parser's.
+    # Empty files. load_protocol must not care - checking the audio is
+    # verify.py's job.
     for i in range(1, 7):
         (flac_dir / f"LA_T_000000{i}.flac").touch()
 
-    return {
-        "paths": {
-            "data_root": str(data_root),
-            "protocols": str(protocols),
-        }
-    }
+    return {"paths": {"data_root": str(data_root), "protocols": str(protocols)}}
 
+
+@pytest.fixture(scope="module")
+def config():
+    return load_config()
+
+
+# --- protocol.py ---
 
 def test_row_count_and_columns(mini_dataset):
     df = load_protocol("train", mini_dataset)
@@ -57,7 +63,7 @@ def test_label_is_zero_for_real_and_one_for_fake(mini_dataset):
     df = load_protocol("train", mini_dataset)
     assert set(df.loc[df["key"] == "bonafide", "label"]) == {0}
     assert set(df.loc[df["key"] == "spoof", "label"]) == {1}
-    assert df["label"].sum() == 3           # exactly three fakes
+    assert df["label"].sum() == 3
     assert pd.api.types.is_integer_dtype(df["label"])
 
 
@@ -69,12 +75,9 @@ def test_system_id_is_dash_on_every_real_row(mini_dataset):
 
 def test_path_points_at_the_flac_file(mini_dataset):
     df = load_protocol("train", mini_dataset)
-    expected = (
-        Path(mini_dataset["paths"]["data_root"])
-        / "ASVspoof2019_LA_train" / "flac" / "LA_T_0000001.flac"
-    )
+    expected = (Path(mini_dataset["paths"]["data_root"])
+                / "ASVspoof2019_LA_train" / "flac" / "LA_T_0000001.flac")
     assert Path(df.loc[0, "path"]) == expected
-    # every path we generated should exist, since the fixture touched them all
     assert all(Path(p).exists() for p in df["path"])
 
 
@@ -92,10 +95,7 @@ def test_unknown_partition_raises(mini_dataset):
 
 
 def test_summarise_counts(mini_dataset):
-    df = load_protocol("train", mini_dataset)
-    s = summarise(df)
-    assert len(s) == 1
-    row = s.iloc[0]
+    row = summarise(load_protocol("train", mini_dataset)).iloc[0]
     assert row["partition"] == "train"
     assert row["real"] == 3
     assert row["fake"] == 3
@@ -104,41 +104,31 @@ def test_summarise_counts(mini_dataset):
     assert row["attacks"] == "A01,A02"
 
 
-# ---------------------------------------------------------------------------
-# src/audio.py  (BUILD.md step 6)
-# ---------------------------------------------------------------------------
-
-import numpy as np                                            # noqa: E402
-
-from src.audio import fix_length, load_audio, normalise        # noqa: E402
-
+# --- audio.py ---
 
 def test_fix_length_trims_when_too_long():
     wav = np.arange(500, dtype=np.float32)
     out = fix_length(wav, 250)
     assert len(out) == 250
-    assert np.array_equal(out, wav[:250])        # deterministic: takes the front
+    assert np.array_equal(out, wav[:250])        # takes the front, not a random crop
 
 
 def test_fix_length_leaves_exact_input_alone():
     wav = np.arange(250, dtype=np.float32)
-    out = fix_length(wav, 250)
-    assert len(out) == 250
-    assert np.array_equal(out, wav)
+    assert np.array_equal(fix_length(wav, 250), wav)
 
 
 def test_fix_length_repeat_pads_100_to_250():
     wav = np.arange(100, dtype=np.float32)
     out = fix_length(wav, 250, pad_mode="repeat")
     assert len(out) == 250
-    assert np.array_equal(out[:100], wav)        # first copy
-    assert np.array_equal(out[100:200], wav)     # second copy
-    assert np.array_equal(out[200:], wav[:50])   # trimmed third copy
+    assert np.array_equal(out[:100], wav)
+    assert np.array_equal(out[100:200], wav)
+    assert np.array_equal(out[200:], wav[:50])   # third copy, trimmed
 
 
 def test_fix_length_zero_pads():
-    wav = np.ones(100, dtype=np.float32)
-    out = fix_length(wav, 250, pad_mode="zero")
+    out = fix_length(np.ones(100, dtype=np.float32), 250, pad_mode="zero")
     assert len(out) == 250
     assert out[:100].all() and not out[100:].any()
 
@@ -149,8 +139,7 @@ def test_fix_length_rejects_bad_pad_mode():
 
 
 def test_normalise_scales_peak_to_one():
-    wav = np.array([0.0, 0.25, -0.5], dtype=np.float32)
-    out = normalise(wav, "peak")
+    out = normalise(np.array([0.0, 0.25, -0.5], dtype=np.float32), "peak")
     assert np.isclose(np.max(np.abs(out)), 1.0)
     assert np.isclose(out[1], 0.5)               # ratios preserved
 
@@ -158,7 +147,7 @@ def test_normalise_scales_peak_to_one():
 def test_normalise_leaves_all_zeros_alone():
     wav = np.zeros(100, dtype=np.float32)
     out = normalise(wav, "peak")
-    assert np.array_equal(out, wav)              # no divide-by-zero, no NaNs
+    assert np.array_equal(out, wav)              # no divide by zero
     assert not np.isnan(out).any()
 
 
@@ -175,24 +164,13 @@ def test_load_audio_returns_float32_mono(tmp_path):
     assert len(wav) == sr
 
 
-# ---------------------------------------------------------------------------
-# src/features.py  (BUILD.md step 8)
-# ---------------------------------------------------------------------------
-
-from src.features import expected_n_frames, logmel, ms_to_samples   # noqa: E402
-from src.utils import load_config                                   # noqa: E402
-
-
-@pytest.fixture(scope="module")
-def config():
-    return load_config()
-
+# --- features.py ---
 
 def test_ms_to_samples():
     assert ms_to_samples(25, 16000) == 400
     assert ms_to_samples(10, 16000) == 160
-    # the whole point: the same milliseconds give a different sample count
-    # at a different rate, and the duration stays 25 ms either way
+    # same milliseconds, different rate, different sample count - which is
+    # the reason the config stores milliseconds
     assert ms_to_samples(25, 8000) == 200
     assert ms_to_samples(25, 22050) == 551
 
@@ -205,12 +183,12 @@ def test_logmel_shape_matches_prediction(config):
     S = logmel(wav, config)
     assert S.shape == (config["features"]["logmel"]["n_mels"],
                        expected_n_frames(n, config))
-    assert S.shape == (80, 401)          # the number written down in BUILD.md
+    assert S.shape == (80, 401)          # the number predicted in BUILD.md
     assert S.dtype == np.float32
 
 
 def test_logmel_is_finite_on_silence(config):
-    """log(0) is -inf; the log_offset exists to stop that."""
+    """log(0) is -inf. The log_offset exists to stop that."""
     sr = config["audio"]["sample_rate"]
     S = logmel(np.zeros(sr, dtype=np.float32), config)
     assert np.isfinite(S).all()

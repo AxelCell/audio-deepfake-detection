@@ -3,41 +3,36 @@
     python scripts/download.py                  # download, then extract
     python scripts/download.py --skip-download  # extract a zip you already have
 
-The download is ~7.1 GB and will take hours. It resumes if interrupted, so it
-is safe to stop it with Ctrl-C and run it again later.
+About 7.1 GB, so it takes hours. It resumes if interrupted, so Ctrl-C and
+re-running later is safe.
 
-Do NOT download PA.zip (16.4 GB) - replay attacks are out of scope.
+Do not download PA.zip (16.4 GB) - replay attacks are out of scope.
 """
 
 import os
 import sys
 
-# scripts/ is first on sys.path when you run a script from it, and this folder
-# contains inspect.py - which shadows Python's standard library `inspect`
-# module. numpy, librosa and matplotlib all import `inspect` internally, so
-# without this they would find our file instead and fail with a confusing
-# "circular import" error. Drop the script directory, add the repo root.
-# The same block is in scripts/inspect.py, which explains it at length.
-_HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path[:] = [p for p in sys.path
-               if os.path.abspath(p or os.getcwd()) != _HERE]
-sys.path.insert(0, os.path.dirname(_HERE))
+# scripts/inspect.py shadows the standard library's inspect module, which
+# numpy and librosa import. Replace scripts/ on sys.path with the repo root.
+sys.path[0] = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-import argparse                                             # noqa: E402
-import logging                                              # noqa: E402
-import zipfile                                              # noqa: E402
-from pathlib import Path                                    # noqa: E402
-import requests                                             # noqa: E402
-from tqdm import tqdm                                       # noqa: E402
-from src.utils import REPO_ROOT, setup_logging              # noqa: E402
+import argparse                                              # noqa: E402
+import logging                                               # noqa: E402
+import zipfile                                               # noqa: E402
+from pathlib import Path                                     # noqa: E402
+
+import requests                                              # noqa: E402
+from tqdm import tqdm                                        # noqa: E402
+
+from src.utils import REPO_ROOT, setup_logging               # noqa: E402
 
 URL = "https://datashare.ed.ac.uk/bitstream/handle/10283/3336/LA.zip"
 ZIP_NAME = "LA.zip"
-# Exact size, read from the server's Content-Range header on 2026-09-21.
-# 7,640,952,520 bytes = 7.12 GiB, which is the "7.1 GB" BUILD.md quotes.
-# An exact figure makes truncation detectable; a rounded one does not.
+
+# Exact size from the server's Content-Range header. An exact figure makes a
+# truncated download detectable; a rounded one does not.
 EXPECTED_BYTES = 7_640_952_520
-CHUNK = 1024 * 1024   # 1 MiB
+CHUNK = 1024 * 1024
 
 EXPECTED_DIRS = [
     "LA/ASVspoof2019_LA_train/flac",
@@ -48,21 +43,21 @@ EXPECTED_DIRS = [
 
 
 def download(url, dest):
-    """Stream `url` to `dest`, resuming from a partial file if there is one."""
+    """Stream url to dest, resuming from a partial file if there is one."""
     have = dest.stat().st_size if dest.exists() else 0
 
     headers = {"Range": f"bytes={have}-"} if have else {}
     response = requests.get(url, headers=headers, stream=True, timeout=60)
 
     if response.status_code == 416:
-        # Range not satisfiable: we already have the whole file.
+        # Range not satisfiable - we already have the whole file.
         logging.info("file already complete (%.2f GB)", have / 1e9)
         response.close()
         return
 
     if have and response.status_code == 200:
-        # The server ignored our Range header and is sending the file from the
-        # start. Appending would corrupt it, so throw away what we have.
+        # The server ignored the Range header and is sending from the start.
+        # Appending would corrupt the file, so start over.
         logging.warning("server does not support resume - restarting download")
         have = 0
         dest.unlink()
@@ -74,8 +69,7 @@ def download(url, dest):
     remaining = int(response.headers.get("Content-Length", 0))
     total = have + remaining if remaining else None
 
-    mode = "ab" if have else "wb"
-    with open(dest, mode) as f, tqdm(
+    with open(dest, "ab" if have else "wb") as f, tqdm(
         total=total, initial=have, unit="B", unit_scale=True,
         unit_divisor=1024, desc=dest.name,
     ) as bar:
@@ -88,25 +82,18 @@ def download(url, dest):
     logging.info("downloaded %.2f GB to %s", size / 1e9, dest)
     if size != EXPECTED_BYTES:
         logging.warning(
-            "size is %d bytes, expected %d (difference %+d). The file is "
-            "probably truncated - re-run this script and it will resume.",
-            size, EXPECTED_BYTES, size - EXPECTED_BYTES,
-        )
-    else:
-        logging.info("size matches the expected byte count exactly")
+            "size is %d bytes, expected %d. Probably truncated - re-run this "
+            "script and it will resume.", size, EXPECTED_BYTES)
 
 
 def extract(zip_path, data_dir):
-    """Check the zip opens, then extract it into data_dir."""
+    """Check the zip opens, then extract it."""
     if not zip_path.exists():
         raise FileNotFoundError(
-            f"{zip_path} not found. Run without --skip-download, or put the "
-            f"file there yourself."
-        )
+            f"{zip_path} not found. Run without --skip-download.")
 
-    # Open and read the index before extracting. A truncated download usually
-    # fails right here, which is much better than failing 40 minutes into
-    # writing 121,000 files.
+    # Read the index before extracting. A truncated download fails here,
+    # which beats failing 40 minutes into writing 121,000 files.
     logging.info("checking the zip opens...")
     with zipfile.ZipFile(zip_path) as zf:
         names = zf.namelist()
@@ -121,14 +108,12 @@ def extract(zip_path, data_dir):
 
 
 def report_tree(data_dir):
-    """Print what we ended up with, and whether it looks right."""
     print("\nResulting folder structure:")
     ok = True
     for rel in EXPECTED_DIRS:
         path = data_dir / rel
         if path.is_dir():
-            n = sum(1 for _ in path.iterdir())
-            print(f"  OK       {rel}  ({n} entries)")
+            print(f"  OK       {rel}  ({sum(1 for _ in path.iterdir())} entries)")
         else:
             print(f"  MISSING  {rel}")
             ok = False
@@ -137,10 +122,8 @@ def report_tree(data_dir):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--skip-download", action="store_true",
-        help="skip the download and just extract an existing LA.zip",
-    )
+    parser.add_argument("--skip-download", action="store_true",
+                        help="skip the download and just extract an existing LA.zip")
     args = parser.parse_args()
 
     setup_logging()
@@ -159,10 +142,10 @@ def main():
     print("\n" + "-" * 70)
     if ok:
         print("Next:  python scripts/verify.py")
-        print(f"\nThen delete the zip to free ~7 GB:  del {zip_path}")
+        print(f"\nThen delete the zip to free 7 GB:  del {zip_path}")
     else:
         print("Some folders are missing - the download may be incomplete.")
-        print("Re-run this script; it will resume rather than start over.")
+        print("Re-run this script; it resumes rather than starting over.")
     print("-" * 70)
     return 0 if ok else 1
 
