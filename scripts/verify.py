@@ -22,7 +22,7 @@ import pandas as pd                                          # noqa: E402
 import soundfile as sf                                       # noqa: E402
 
 from src.protocol import PARTITIONS, load_protocol, summarise  # noqa: E402
-from src.utils import load_config, setup_logging             # noqa: E402
+from src.utils import load_config, repo_relative, setup_logging  # noqa: E402
 
 # From the ASVspoof 2019 LA documentation. A difference here nearly always
 # means the download or extraction did not finish.
@@ -225,7 +225,7 @@ def main():
     r("=" * 70)
     r("ASVspoof 2019 LA - dataset verification")
     r("=" * 70)
-    r("data_root: " + config["paths"]["data_root"])
+    r("data_root: " + repo_relative(config["paths"]["data_root"], config))
     r()
 
     check_folders(config, r)

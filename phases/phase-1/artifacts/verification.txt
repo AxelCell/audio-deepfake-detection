@@ -1,7 +1,7 @@
 ======================================================================
 ASVspoof 2019 LA - dataset verification
 ======================================================================
-data_root: C:\Users\Vaibhav Bisht\Desktop\7 Sem Project\data\LA
+data_root: data/LA
 
 1. Folder structure
   PASS     LA/ASVspoof2019_LA_cm_protocols

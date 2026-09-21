@@ -20,7 +20,6 @@ import argparse                                              # noqa: E402
 import logging                                               # noqa: E402
 import time                                                  # noqa: E402
 import zipfile                                               # noqa: E402
-from pathlib import Path                                     # noqa: E402
 
 import requests                                              # noqa: E402
 from tqdm import tqdm                                        # noqa: E402

@@ -23,7 +23,8 @@ from src.audio import fix_length, load_audio, normalise      # noqa: E402
 from src.features import logmel                              # noqa: E402
 from src.plots import first_look_figure, save_figure         # noqa: E402
 from src.protocol import load_protocol                       # noqa: E402
-from src.utils import load_config, set_seed, setup_logging   # noqa: E402
+from src.utils import (load_config, repo_relative, set_seed,  # noqa: E402
+                       setup_logging)
 
 # A04 and A06 are older generators and leave more visible traces, which makes
 # a clearer first picture.
@@ -120,7 +121,7 @@ def main():
         "seed": config["seed"],
         "audio": config["audio"],
         "features": config["features"],
-        "figure": str(figure_path),
+        "figure": repo_relative(figure_path, config),
     }
     results_path = Path(config["paths"]["results"]) / "inspect.json"
     results_path.parent.mkdir(parents=True, exist_ok=True)

@@ -46,7 +46,7 @@ python -m venv .venv
 # 4. Install everything else
 pip install -r requirements.txt
 
-# 5. Check the code works before touching the dataset (~2 seconds)
+# 5. Check the code works before touching the dataset (a few seconds)
 pytest -q
 
 # 6. Download the dataset. ~7.1 GB, takes hours, resumes if interrupted.
@@ -60,9 +60,10 @@ python scripts/verify.py
 python scripts/inspect.py
 ```
 
-Step 8 writes `figures/first_look.png`. On the first run it picks an utterance
-pair at random and prints the ids; paste them into `config.yaml` under
-`inspect:` so everyone reproduces the same picture from then on.
+Step 8 writes `figures/first_look.png`. The utterance pair is frozen in
+`config.yaml` (`LA_T_8970804` real, `LA_T_3653342` spoof/A06), so you should
+get a byte-identical PNG to the one in the repo. If you set either id back to
+`null` the script picks one at random and prints it for you to paste back in.
 
 | What | Command | Needs the dataset |
 |---|---|---|

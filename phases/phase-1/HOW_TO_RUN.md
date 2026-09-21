@@ -32,7 +32,7 @@ pip install -r requirements.txt
 
 Most of the time here is PyTorch, which is about 2.5 GB.
 
-## 2. Tests (~2 seconds)
+## 2. Tests (a few seconds)
 
 ```bash
 pytest -q
@@ -94,18 +94,18 @@ same colour scale so they are comparable. Also writes `results/inspect.json`
 recording which utterances were used, their durations before and after length
 fixing, the feature settings and the seed.
 
-On the **first** run it picks one real and one fake utterance at random from
-the train set (preferring attacks A04 or A06, whose artefacts are more
-visible), prints the ids, and asks you to paste them into `config.yaml`:
+The pair is already frozen in `config.yaml` — `LA_T_8970804` (real) and
+`LA_T_3653342` (spoof, attack A06) — so you should get exactly the PNG that is
+in the repo, SHA-256 `9402b4e8…`. Check it:
 
-```yaml
-inspect:
-  real_utt_id: LA_T_xxxxxxx
-  fake_utt_id: LA_T_xxxxxxx
+```bash
+sha256sum figures/first_look.png      # or: certutil -hashfile ... SHA256
 ```
 
-Do that. From then on the figure is frozen and everyone reproduces the same
-picture. Running the script twice must produce a byte-identical PNG.
+If you set either id back to `null`, the script picks one at random from the
+train set instead (preferring A04 or A06, whose artefacts are more visible),
+prints the ids, and asks you to paste them back into `config.yaml`. That is
+how the current pair was chosen.
 
 ## When it goes wrong
 

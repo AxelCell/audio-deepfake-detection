@@ -35,6 +35,22 @@ def load_config(path="config.yaml"):
     return config
 
 
+def repo_relative(path, config):
+    """Path relative to the repo root, with forward slashes.
+
+    Anything written into a committed artifact goes through this. An absolute
+    path bakes in one person's username and folder layout, so the same run on
+    two machines would produce artifacts that differ for no real reason.
+
+    Falls back to the full path if it is outside the repo, which is what the
+    tests do when they point the config at a temp folder.
+    """
+    try:
+        return Path(path).resolve().relative_to(config["repo_root"]).as_posix()
+    except ValueError:
+        return str(path)
+
+
 def set_seed(seed):
     """Seed random, numpy and torch so two runs give the same answer."""
     os.environ["PYTHONHASHSEED"] = str(seed)
