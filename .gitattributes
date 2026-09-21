@@ -1,0 +1,20 @@
+# ---------------------------------------------------------------------------
+# Line endings. The team is split across Windows and WSL/Linux, and without
+# this git rewrites CRLF<->LF per machine, so the same file shows up as
+# "modified" on a teammate's clone with every line changed. Normalise text to
+# LF in the repository; each checkout still gets its platform's endings.
+# ---------------------------------------------------------------------------
+* text=auto eol=lf
+
+# ---------------------------------------------------------------------------
+# Binary files - never touch these.
+# figures/*.png matters most: phase 1 requires that running inspect.py twice
+# produces a byte-identical PNG. Any line-ending rewriting would corrupt the
+# file outright and silently break that guarantee.
+# ---------------------------------------------------------------------------
+*.png  binary
+*.pdf  binary
+*.flac binary
+*.wav  binary
+*.npy  binary
+*.pt   binary

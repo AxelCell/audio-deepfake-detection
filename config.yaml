@@ -1,0 +1,37 @@
+# ---------------------------------------------------------------------------
+# Every setting that affects a result lives here, never in a .py file.
+# If you are about to type a number into code and it changes what the model
+# learns or what a feature looks like, it belongs in this file. (CLAUDE.md #1)
+# ---------------------------------------------------------------------------
+
+seed: 1337
+
+paths:
+  data_root: data/LA
+  protocols: data/LA/ASVspoof2019_LA_cm_protocols
+  figures: figures
+  results: results
+
+audio:
+  sample_rate: 16000
+  duration_seconds: 4.0     # changes in experiment E4
+  normalise: peak
+  pad_mode: repeat          # repeat the clip if it's too short
+
+features:
+  front_end: logmel         # logmel | lfcc | cqcc
+  logmel:
+    n_fft: 512
+    win_length_ms: 25       # milliseconds, not samples - see src/features.py
+    hop_length_ms: 10
+    n_mels: 80
+    f_min: 0
+    f_max: 8000
+    # Keep the spelling `1.0e-6` exactly. PyYAML follows YAML 1.1, which needs
+    # BOTH a decimal point and a signed exponent to read this as a number:
+    # `1e-6` and `1.0e6` both parse as STRINGS and break things far away.
+    log_offset: 1.0e-6
+
+inspect:
+  real_utt_id: null         # filled in after the first run
+  fake_utt_id: null

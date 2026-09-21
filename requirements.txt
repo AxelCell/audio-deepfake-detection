@@ -1,0 +1,48 @@
+# ---------------------------------------------------------------------------
+# INSTALL PYTORCH FIRST — do not skip this.
+#
+#   1. Go to https://pytorch.org/get-started/locally/
+#   2. Pick your OS / package manager / CUDA version, run the command it gives
+#   3. Then run: pip install -r requirements.txt
+#
+# A plain `pip install torch` on Windows can quietly install a CPU-only build.
+# You will not notice until phase 3, when training is ~40x slower than it
+# should be. Installing from the selector first means pip finds the constraint
+# below already satisfied and leaves your build alone.
+#
+# Versions are floors (>=), set at the first release with Python 3.12 wheels.
+# Exact versions get recorded in the phase report via `pip freeze` at close.
+# ---------------------------------------------------------------------------
+
+# Deep learning (see note above)
+torch>=2.2
+torchaudio>=2.2
+
+# Audio I/O and signal processing
+librosa>=0.10.1
+# reads FLAC; ships libsndfile, so there is no system package to install
+soundfile>=0.12.1
+
+# Numerics and tables
+numpy>=1.26
+scipy>=1.11
+pandas>=2.1
+
+# Metrics (EER helpers in phase 3)
+scikit-learn>=1.3
+
+# Figures
+matplotlib>=3.8
+
+# Config and testing
+PyYAML>=6.0
+pytest>=7.4
+
+# Dataset download (scripts/download.py, BUILD.md step 5)
+# streaming download + HTTP Range resume
+requests>=2.31
+# progress bar
+tqdm>=4.66
+
+# Phase 8 only — left commented so we do not install it 19 weeks early.
+# streamlit>=1.30
