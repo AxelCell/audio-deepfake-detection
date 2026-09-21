@@ -42,7 +42,7 @@ Expected: `19 passed`. These deliberately do not need the dataset — they build
 miniature protocol files and synthetic audio in a temp folder. If they fail on
 a fresh clone, stop and fix that before downloading 7 GB.
 
-## 3. Download the dataset (2–6 hours, unattended)
+## 3. Download the dataset (hours — plan to leave it overnight)
 
 ```bash
 python scripts/download.py
@@ -53,6 +53,13 @@ opens, extracts into `data/`, then prints the folder structure.
 
 - **Safe to interrupt.** Ctrl-C and re-run; it sends an HTTP `Range` header and
   resumes from where it stopped rather than starting again.
+- **Expect it to be slow.** Measured on a home connection on 2026-09-21:
+  roughly 6 MB/min, about 20 hours end to end. That is the server, not you —
+  datashare.ed.ac.uk throttles each connection, and three simultaneous range
+  requests were measured pulling ~530 KB/s between them while a single stream
+  held ~100 KB/s. `download.py` uses one connection on purpose, because
+  BUILD.md step 5 specifies a single resumable stream and a single stream is
+  far harder to corrupt. Start it and go to bed.
 - If you already have the zip: `python scripts/download.py --skip-download`
 - Afterwards, delete `data/LA.zip` to free 7 GB.
 
