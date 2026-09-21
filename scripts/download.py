@@ -18,6 +18,7 @@ sys.path[0] = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 import argparse                                              # noqa: E402
 import logging                                               # noqa: E402
+import time                                                  # noqa: E402
 import zipfile                                               # noqa: E402
 from pathlib import Path                                     # noqa: E402
 
@@ -34,6 +35,11 @@ ZIP_NAME = "LA.zip"
 EXPECTED_BYTES = 7_640_952_520
 CHUNK = 1024 * 1024
 
+# The server drops the connection every gigabyte or so. Each attempt resumes
+# from what is already on disk, so these are continuations, not restarts.
+MAX_ATTEMPTS = 40
+RETRY_WAIT = 10
+
 EXPECTED_DIRS = [
     "LA/ASVspoof2019_LA_train/flac",
     "LA/ASVspoof2019_LA_dev/flac",
@@ -43,8 +49,51 @@ EXPECTED_DIRS = [
 
 
 def download(url, dest):
-    """Stream url to dest, resuming from a partial file if there is one."""
-    have = dest.stat().st_size if dest.exists() else 0
+    """Fetch the zip, restarting the stream whenever the connection drops.
+
+    On a 7 GB download the connection breaking is a when, not an if - we lost
+    it at 1.2 GB on the first run. Each attempt sends a fresh Range header for
+    the bytes we do not have yet, so nothing already downloaded is re-fetched.
+    """
+    no_progress = 0
+
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        have = dest.stat().st_size if dest.exists() else 0
+
+        if have >= EXPECTED_BYTES:
+            logging.info("download complete, %.2f GB", have / 1e9)
+            return
+
+        try:
+            _fetch_from(url, dest, have)
+        except (requests.exceptions.ChunkedEncodingError,
+                requests.exceptions.ConnectionError,
+                requests.exceptions.Timeout) as exc:
+            logging.warning("connection dropped (%s)", type(exc).__name__)
+
+        now = dest.stat().st_size if dest.exists() else 0
+        if now == have:
+            # Distinguish a flaky connection from one that is simply down.
+            no_progress += 1
+            if no_progress >= 3:
+                raise RuntimeError(
+                    f"stuck at {now / 1e9:.2f} GB - three attempts in a row "
+                    f"moved nothing. Check the network, then re-run.")
+        else:
+            no_progress = 0
+            logging.info("%.2f GB of %.2f GB (%.1f%%), attempt %d",
+                         now / 1e9, EXPECTED_BYTES / 1e9,
+                         100.0 * now / EXPECTED_BYTES, attempt)
+
+        time.sleep(RETRY_WAIT)
+
+    raise RuntimeError(
+        f"gave up after {MAX_ATTEMPTS} attempts. Re-run to carry on from "
+        f"{dest.stat().st_size / 1e9:.2f} GB.")
+
+
+def _fetch_from(url, dest, have):
+    """One attempt: ask for everything from byte `have` onwards and append it."""
 
     headers = {"Range": f"bytes={have}-"} if have else {}
     response = requests.get(url, headers=headers, stream=True, timeout=60)
@@ -78,12 +127,7 @@ def download(url, dest):
                 f.write(chunk)
                 bar.update(len(chunk))
 
-    size = dest.stat().st_size
-    logging.info("downloaded %.2f GB to %s", size / 1e9, dest)
-    if size != EXPECTED_BYTES:
-        logging.warning(
-            "size is %d bytes, expected %d. Probably truncated - re-run this "
-            "script and it will resume.", size, EXPECTED_BYTES)
+    logging.info("stream ended at %.2f GB", dest.stat().st_size / 1e9)
 
 
 def extract(zip_path, data_dir):
