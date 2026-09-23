@@ -1,6 +1,6 @@
 # Who owns what, and what you need to be able to explain
 
-`PROJECT.md` section 5 says who builds which file. This file is the other
+Our work-split plan says who builds which file. This file is the other
 half: what you should understand about your own part well enough to explain it
 without notes, and the questions you are most likely to be asked about it.
 
@@ -201,7 +201,7 @@ CNN actually sees. `plots.py` and `inspect.py` produce the phase 1 deliverable.
 
 Each person: open your own files, read them top to bottom, and try saying the
 bullets above out loud without looking. Where you stall, that is the bit to
-study — `LEARN.md` says what to read for each topic.
+study — the study plan says what to read for each topic.
 
 Then swap: ask someone else's questions to them. The gaps show up much faster
 when somebody else is asking.

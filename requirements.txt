@@ -38,7 +38,7 @@ matplotlib>=3.8
 PyYAML>=6.0
 pytest>=7.4
 
-# Dataset download (scripts/download.py, BUILD.md step 5)
+# Dataset download (scripts/download.py)
 # streaming download + HTTP Range resume
 requests>=2.31
 # progress bar

@@ -183,7 +183,7 @@ def test_logmel_shape_matches_prediction(config):
     S = logmel(wav, config)
     assert S.shape == (config["features"]["logmel"]["n_mels"],
                        expected_n_frames(n, config))
-    assert S.shape == (80, 401)          # the number predicted in BUILD.md
+    assert S.shape == (80, 401)          # the shape we predicted in advance
     assert S.dtype == np.float32
 
 

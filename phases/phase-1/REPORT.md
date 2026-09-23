@@ -5,7 +5,8 @@
 **Tag:** `phase-1-complete`
 **Dates:** started 2026-09-21 … finished 2026-09-21
 
-All ten BUILD.md steps are built, run and verified against the real dataset.
+All ten steps of the phase 1 plan are built, run and verified against the
+real dataset.
 `verify.py` exits 0, and `figures/first_look.png` exists. Section 5 lists what
 was produced. Nothing here describes a run that did not happen.
 
@@ -39,7 +40,7 @@ any of our machines is. No model is trained here.
 Choices we made, and what we rejected:
 
 - **PyTorch stays in `requirements.txt`** with install-order notes at the top,
-  rather than being documented separately. BUILD.md's done-when is that
+  rather than being documented separately. The plan's done-when is that
   `pip install -r requirements.txt` works on a fresh machine, and a file
   missing torch gives an incomplete setup without saying so.
 - **Version floors (`>=`), not exact pins.** Pins are more reproducible, but
@@ -115,8 +116,8 @@ earlier ±1 GB tolerance, because an exact number makes truncation detectable.
 Throughput was poor and erratic — 40 to 130 kB/s, averaging around 6 MB/min,
 and the whole thing took about 4.5 hours. Three parallel range requests pulled
 ~530 KB/s between them against ~100 KB/s for one stream, so the server
-throttles per connection. We kept the single stream anyway: BUILD.md step 5
-specifies one resumable stream, and one stream is much harder to corrupt than
+throttles per connection. We kept the single stream anyway: the plan calls
+for one resumable stream, and one stream is much harder to corrupt than
 several writing at offsets.
 
 **The first run died.** At 1.21 GB the connection dropped and the script
@@ -150,7 +151,7 @@ silence, which is a giveaway unrelated to how the audio was made.
 
 ### Step 7 — `scripts/verify.py` (Prateek)
 
-All eight checks from BUILD.md. Count mismatches warn and continue instead of
+All eight checks from the plan. Count mismatches warn and continue instead of
 crashing, so an incomplete download shows every symptom at once.
 
 Added beyond spec: a `--config` flag. Without it the script can only point at
@@ -192,7 +193,7 @@ module called `inspect`, and running `python scripts/inspect.py` puts
 librosa and matplotlib found our file and re-executed it mid-import. The error
 blamed a circular import in `src/audio.py`, which was innocent. Fixed by
 replacing `sys.path[0]` — the script's own directory — with the repo root.
-BUILD.md mandates the command `python scripts/inspect.py`, so renaming the
+The plan mandates the command `python scripts/inspect.py`, so renaming the
 file was not an option.
 
 Bug found: the waveform's "time (s)" label collided with the spectrogram title
@@ -375,7 +376,7 @@ Carried over from this phase:
    the 7.12 GB download, so start it early.
 2. The 13 literature notes, and choose references [2] and [3].
 3. Push to GitHub, then branch protection and per-member identities, so
-   `git log` becomes the record PROJECT.md section 5 expects.
+   `git log` becomes the record of who did what.
 
 Phase 2 proper: LFCC and CQCC front-ends, the dataset class and DataLoader,
 and feature caching across all 121,461 files.

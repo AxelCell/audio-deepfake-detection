@@ -1,7 +1,7 @@
 # Literature notes
 
-Thirteen references, one note each, using `TEMPLATE.md`. Split per PROJECT.md
-section 5, due across weeks 1–3.
+Thirteen references, one note each, using `TEMPLATE.md`. Split per our
+work-split plan, due across weeks 1–3.
 
 Copy the template to the filename below and commit it under your own name.
 
@@ -21,8 +21,8 @@ Copy the template to the filename below and commit it under your own name.
 | 12 | ASVspoof 2021 | Tania | `12-asvspoof2021.md` | cross-dataset test, P6.2 |
 | 13 | ASVspoof 2021 (companion) | Tania | `13-asvspoof2021-results.md` | cross-dataset test, P6.2 |
 
-References [2] and [3] are not named in LEARN.md, PROJECT.md or ROADMAP.md, so
-we still need to pick them. A survey of audio deepfake detection and something
+References [2] and [3] are not named in any of our planning documents, so we
+still need to pick them. A survey of audio deepfake detection and something
 on t-DCF are the obvious gaps.
 
 Two things to get right: numbers come from the paper rather than memory, and

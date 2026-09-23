@@ -58,7 +58,7 @@ opens, extracts into `data/`, then prints the folder structure.
   datashare.ed.ac.uk throttles each connection, and three simultaneous range
   requests were measured pulling ~530 KB/s between them while a single stream
   held ~100 KB/s. `download.py` uses one connection on purpose, because
-  BUILD.md step 5 specifies a single resumable stream and a single stream is
+  our plan specifies a single resumable stream, and a single stream is
   far harder to corrupt. Start it and go to bed.
 - If you already have the zip: `python scripts/download.py --skip-download`
 - Afterwards, delete `data/LA.zip` to free 7 GB.
