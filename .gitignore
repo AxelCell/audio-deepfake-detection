@@ -35,5 +35,7 @@ __pycache__/
 # ---------------------------------------------------------------------------
 !phases/**/artifacts/**
 
-# Tooling config, not project documentation.
+# Internal working documents. They live here so they are next to the work and
+# available offline, but they are not part of the published project.
 CLAUDE.md
+planning/
