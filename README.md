@@ -112,13 +112,16 @@ by the git tag `phase-N-complete`.
 
 | File | What it's for |
 |---|---|
-| `PROGRESS.md` | Where we are |
-| `docs/PROJECT.md` | Process: how a phase runs, work split, handoffs |
-| `docs/ROADMAP.md` | Technical detail of phases 2–8 |
-| `docs/BUILD.md` | Phase 1, step by step |
-| `docs/LEARN.md` | What the team is studying, and when |
+| `PROGRESS.md` | Where we are, and what is still open |
+| `phases/phase-1/REPORT.md` | What phase 1 built, every decision and why |
+| `phases/phase-1/HOW_TO_RUN.md` | Exact commands, timings and failure modes |
+| `phases/phase-1/artifacts/` | The figure, the verification report, the run record |
 | `docs/OWNERSHIP.md` | Who owns what, and what each of us must be able to explain |
-| `phases/phase-1/` | What phase 1 did, how to run it, and its artifacts |
+| `docs/literature/` | The 13 paper notes, and the template they share |
+
+The detailed build plan and the phase 2–8 roadmap are internal working
+documents and are not published here; `phases/phase-N/REPORT.md` records what
+each phase actually did.
 
 ---
 
