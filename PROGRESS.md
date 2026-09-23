@@ -37,11 +37,12 @@ Artifacts are in `phases/phase-1/artifacts/`.
    References [2] and [3] have not been chosen.
 2. **Only one machine.** The checklist wants all four members to run the
    pipeline on their own machines. One has.
-3. **No remote yet.** Push to GitHub, then branch protection and per-member
-   identities so `git log` becomes the record PROJECT.md section 5 expects.
-4. **`data/LA.zip` is still on disk**, 7.12 GB. Safe to delete now that the
-   extraction is verified — it is only kept in case anyone wants to re-extract
-   without a four-hour download.
+3. **Branch protection and per-member identities.** `main` should be
+   protected and every member should commit under their own name, so `git log`
+   is the record of who did what.
+4. **Each member needs their own copy of the dataset.** 7.12 GB, several
+   hours, and `scripts/download.py` resumes if it drops. Start it early —
+   nothing past phase 1 runs without it.
 
 ## Next
 
