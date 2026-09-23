@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------
 # Every setting that affects a result lives here, never in a .py file.
 # If you are about to type a number into code and it changes what the model
-# learns or what a feature looks like, it belongs in this file. (CLAUDE.md #1)
+# learns or what a feature looks like, it belongs in this file.
 # ---------------------------------------------------------------------------
 
 seed: 1337

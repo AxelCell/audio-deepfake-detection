@@ -147,7 +147,7 @@ def check_balance(frames, r):
             row["partition"], row["fake_per_real"], pct))
     r()
     r("  This is why we never report accuracy - answering 'fake' every time")
-    r("  scores about 90% here. We use EER and min t-DCF. (CLAUDE.md rule 4)")
+    r("  scores about 90% here. We use EER and min t-DCF instead.")
     r()
 
 

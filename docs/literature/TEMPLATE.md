@@ -29,7 +29,7 @@ below is then not comparable with ours.
 
 Copy these from the paper. If one is not stated, write "not reported" rather
 than estimating it — these end up in our related-work table, and a wrong
-number there is worse than a blank (CLAUDE.md rule 5).
+number there is worse than a blank.
 
 ## 5. What do we take from it?
 
