@@ -34,3 +34,6 @@ __pycache__/
 # so re-include that tree explicitly.
 # ---------------------------------------------------------------------------
 !phases/**/artifacts/**
+
+# Tooling config, not project documentation.
+CLAUDE.md

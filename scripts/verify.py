@@ -54,6 +54,9 @@ class Report:
         print(text)
         self.lines.append(text)
 
+    def ok(self, text):
+        self("  PASS     " + text)
+
     def fail(self, text):
         self("  FAIL     " + text)
         self.failed = True
@@ -61,9 +64,6 @@ class Report:
     def warn(self, text):
         self("  MISMATCH " + text)
         self.failed = True
-
-    def ok(self, text):
-        self("  PASS     " + text)
 
     def save(self, path):
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -74,17 +74,12 @@ class Report:
 def check_folders(config, r):
     r("1. Folder structure")
     data_root = Path(config["paths"]["data_root"])
-
     targets = [Path(config["paths"]["protocols"])]
-    for spec in PARTITIONS.values():
-        targets.append(data_root / spec["flac_dir"] / "flac")
+    targets += [data_root / s["flac_dir"] / "flac" for s in PARTITIONS.values()]
 
     for path in targets:
-        rel = path.parent.name + "/" + path.name
-        if path.is_dir():
-            r.ok(rel)
-        else:
-            r.fail(rel + " is missing (" + str(path) + ")")
+        name = path.parent.name + "/" + path.name
+        r.ok(name) if path.is_dir() else r.fail(f"{name} is missing ({path})")
     r()
 
 
@@ -93,9 +88,8 @@ def load_all(config, r):
     frames = {}
     for partition in PARTITIONS:
         try:
-            df = load_protocol(partition, config)
-            frames[partition] = df
-            r.ok("{:<6} {:>7,} rows".format(partition, len(df)))
+            frames[partition] = load_protocol(partition, config)
+            r.ok("{:<6} {:>7,} rows".format(partition, len(frames[partition])))
         except FileNotFoundError as exc:
             r.fail("{:<6} {}".format(partition, str(exc).splitlines()[0]))
     r()
@@ -124,19 +118,21 @@ def check_counts(frames, r):
 def check_attacks(frames, r):
     r("4. Attack distribution")
     for partition, df in frames.items():
-        attacks = set(a for a in df["system_id"].unique() if a != "-")
+        found = {a for a in df["system_id"].unique() if a != "-"}
         expected = EXPECTED_ATTACKS[partition]
         r("  {:<6} {} attacks: {}".format(
-            partition, len(attacks), ",".join(sorted(attacks))))
-        if attacks == expected:
+            partition, len(found), ",".join(sorted(found))))
+
+        if found == expected:
             r.ok(partition + " has exactly the expected attacks")
-        else:
-            detail = []
-            if attacks - expected:
-                detail.append("unexpected " + str(sorted(attacks - expected)))
-            if expected - attacks:
-                detail.append("missing " + str(sorted(expected - attacks)))
-            r.warn(partition + ": " + "; ".join(detail))
+            continue
+        detail = []
+        if found - expected:
+            detail.append("unexpected " + str(sorted(found - expected)))
+        if expected - found:
+            detail.append("missing " + str(sorted(expected - found)))
+        r.warn(partition + ": " + "; ".join(detail))
+
     r("  A01-A06 in train/dev, A07-A19 in eval only. The eval attacks are")
     r("  generators the model never sees in training, so the eval number")
     r("  measures generalisation rather than memorisation.")
@@ -145,8 +141,7 @@ def check_attacks(frames, r):
 
 def check_balance(frames, r):
     r("5. Class balance")
-    combined = pd.concat(frames.values(), ignore_index=True)
-    for _, row in summarise(combined).iterrows():
+    for _, row in summarise(pd.concat(frames.values(), ignore_index=True)).iterrows():
         pct = 100.0 * row["fake"] / row["total"] if row["total"] else 0.0
         r("  {:<6} 1 real : {:.2f} fake   ({:.1f}% of clips are fake)".format(
             row["partition"], row["fake_per_real"], pct))
@@ -162,13 +157,13 @@ def check_files_exist(frames, r):
         missing = [p for p in df["path"] if not Path(p).exists()]
         if not missing:
             r.ok("{:<6} all {:,} files present".format(partition, len(df)))
-        else:
-            r.fail("{:<6} {:,} of {:,} files missing".format(
-                partition, len(missing), len(df)))
-            for path in missing[:10]:
-                r("             " + Path(path).name)
-            if len(missing) > 10:
-                r("             ... and {:,} more".format(len(missing) - 10))
+            continue
+        r.fail("{:<6} {:,} of {:,} files missing".format(
+            partition, len(missing), len(df)))
+        for path in missing[:10]:
+            r("             " + Path(path).name)
+        if len(missing) > 10:
+            r("             ... and {:,} more".format(len(missing) - 10))
     r()
 
 
@@ -183,15 +178,14 @@ def check_audio_properties(frames, config, r):
             r.fail("{:<6} no readable files to sample".format(partition))
             continue
 
-        n = min(N_SAMPLED, len(paths))
-        picked = rng.choice(np.array(paths, dtype=object), size=n, replace=False)
-
+        picked = rng.choice(np.array(paths, dtype=object),
+                            size=min(N_SAMPLED, len(paths)), replace=False)
         durations, bad = [], []
         for path in picked:
             try:
                 info = sf.info(str(path))
             except Exception as exc:
-                bad.append(Path(path).name + ": " + str(exc))
+                bad.append(f"{Path(path).name}: {exc}")
                 continue
             if info.samplerate != EXPECTED_SR or info.channels != 1:
                 bad.append("{}: {} Hz, {} channel(s)".format(
@@ -203,13 +197,13 @@ def check_audio_properties(frames, config, r):
               "(n={})".format(partition, min(durations),
                               statistics.median(durations), max(durations),
                               len(durations)))
-        if bad:
+        if not bad:
+            r.ok("{:<6} all sampled files are {} Hz mono".format(
+                partition, EXPECTED_SR))
+        else:
             r.fail("{}: {} file(s) not 16 kHz mono".format(partition, len(bad)))
             for line in bad[:10]:
                 r("             " + line)
-        else:
-            r.ok("{:<6} all sampled files are {} Hz mono".format(
-                partition, EXPECTED_SR))
     r()
 
 

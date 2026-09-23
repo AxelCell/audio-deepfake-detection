@@ -7,9 +7,18 @@ the ASVspoof 2019 Logical Access dataset.
 B.Tech major project · Team **MP2026CSE309** · Graphic Era Deemed to be University
 Supervisor: **Dr. Vidit Kumar**
 
-> **Status: phase 1 of 8 — repository and environment setup.**
-> No model has been trained and no result has been produced yet.
-> See `PROGRESS.md` for where we are.
+> **Phase 1 of 8 complete** — `phase-1-complete`. Repository, environment,
+> dataset verified, first figure.
+> No model has been trained yet, so the results table below is empty.
+
+![Real versus fake, log-mel spectrograms](figures/first_look.png)
+
+A real recording (left) beside an AI-generated one (right), from the training
+set. Waveform above, log-mel spectrogram below, both on the same colour scale.
+Two things are visible without any model: the real clip has a noise floor
+during silence where the fake is nearly black, and the fake's harmonics are
+more regular. Regenerate it with `python scripts/inspect.py` — the utterance
+pair is frozen in `config.yaml`, so the PNG comes out byte-identical.
 
 ---
 
@@ -87,7 +96,7 @@ src/                  all code, one version, always current
 scripts/              things you run from the command line
 tests/                pytest, must pass without the dataset present
 configs/experiments/  one file per experiment run (phase 4 onward)
-docs/literature/      13 paper notes
+docs/                 planning documents and 13 paper notes
 phases/phase-N/       what happened in each phase + its artifacts
 figures/              committed PNGs
 data/ results/ checkpoints/    gitignored
@@ -103,12 +112,13 @@ by the git tag `phase-N-complete`.
 
 | File | What it's for |
 |---|---|
-| `CLAUDE.md` | Rules, structure, teaching mode |
-| `PROJECT.md` | Process: how a phase runs, work split, handoffs |
-| `ROADMAP.md` | Technical detail of phases 2–8 |
-| `BUILD.md` | Phase 1, step by step |
-| `LEARN.md` | What the team is studying, and when |
 | `PROGRESS.md` | Where we are |
+| `docs/PROJECT.md` | Process: how a phase runs, work split, handoffs |
+| `docs/ROADMAP.md` | Technical detail of phases 2–8 |
+| `docs/BUILD.md` | Phase 1, step by step |
+| `docs/LEARN.md` | What the team is studying, and when |
+| `docs/OWNERSHIP.md` | Who owns what, and what each of us must be able to explain |
+| `phases/phase-1/` | What phase 1 did, how to run it, and its artifacts |
 
 ---
 
@@ -116,7 +126,7 @@ by the git tag `phase-N-complete`.
 
 | Phase | Weeks | Delivers |
 |---|---|---|
-| 1 | 1–3 | Repo, environment, dataset verified, first spectrogram figure |
+| 1 | 1–3 | Repo, environment, dataset verified, first spectrogram figure ✅ |
 | 2 | 4–5 | All three front-ends, features cached, DataLoader |
 | 3 | 6–8 | Baseline model, training, EER + t-DCF, **first reported result** |
 | 4 | 9–11 | E1 front-end comparison, E2 augmentation |
